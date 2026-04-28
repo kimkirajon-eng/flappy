@@ -9,17 +9,17 @@ function joinGame() {
     if(role) {
         socket.emit('join', { role, bet });
         document.getElementById('login').style.display = 'none';
+    } else {
+        alert("Lütfen bir isim gir!");
     }
 }
 
 socket.on('gameState', (data) => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // İddia Listesini Güncelle
     betList.innerHTML = "";
     
     // Boruları Çiz
-    ctx.fillStyle = "#2ecc71";
+    ctx.fillStyle = "#27ae60";
     data.pipes.forEach(pipe => {
         ctx.fillRect(pipe.x, 0, 50, pipe.top);
         ctx.fillRect(pipe.x, pipe.bottom, 50, canvas.height - pipe.bottom);
@@ -30,25 +30,24 @@ socket.on('gameState', (data) => {
         let p = data.players[id];
         if (!p.alive) continue;
 
+        // Kuş (Karakter)
         ctx.fillStyle = p.color;
         ctx.fillRect(100, p.y, 25, 25);
         
-        // İsmi kafasının üstüne yaz
+        // İsim
         ctx.fillStyle = "white";
-        ctx.font = "12px Arial";
-        ctx.fillText(p.role, 100, p.y - 5);
+        ctx.font = "bold 14px Arial";
+        ctx.fillText(p.role, 100, p.y - 10);
 
-        // İddia listesine ekle
-        const betItem = document.createElement('div');
-        betItem.style.color = p.color;
-        betItem.innerHTML = `<strong>${p.role}:</strong> ${p.bet} (${p.score} Puan)`;
-        betList.appendChild(betItem);
+        // İddia Listesi Güncelleme
+        const div = document.createElement('div');
+        div.style.color = p.color;
+        div.style.marginBottom = "5px";
+        div.innerHTML = `<strong>${p.role}:</strong> ${p.bet} <br><small>Skor: ${p.score}</small>`;
+        betList.appendChild(div);
     }
 });
 
-window.addEventListener('keydown', (e) => {
-    if(e.code === 'Space') socket.emit('jump');
-});
-
-// Mobil dokunuş desteği
-window.addEventListener('touchstart', () => socket.emit('jump'));
+// Kontroller
+window.addEventListener('keydown', (e) => { if(e.code === 'Space') socket.emit('jump'); });
+window.addEventListener('touchstart', (e) => { e.preventDefault(); socket.emit('jump'); }, {passive: false});
