@@ -2,73 +2,65 @@ const express = require('express');
 const app = express();
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
-const path = require('path');
 
 app.use(express.static(__dirname));
 
 let players = {};
 let pipes = [];
-let frameCount = 0;
-let gameSpeed = 3;
-let highScore = { name: "Yok", score: 0 };
-
-function createPipe() {
-    const gap = 170; // Mobil için biraz daha geniş boşluk
-    const height = Math.floor(Math.random() * 250) + 50;
-    pipes.push({ x: 600, top: height, bottom: height + gap, scored: false });
-}
-
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
+let comboCount = 0; // İki oyuncunun beraber geçtiği engel sayısı
+let deathLimit = 10;
+let showTogetherMessage = true; // Hakkı'nın kontrolündeki ayar
 
 io.on('connection', (socket) => {
     socket.on('join', (data) => {
         players[socket.id] = { 
             role: data.role, 
-            bet: data.bet || "Zevkine",
-            y: 300, velocity: 0, score: 0, alive: true, 
-            color: data.role === 'Ceylanım' ? '#ff4d4d' : '#4d94ff' 
+            y: data.role === 'Hakkı' ? 150 : 450,
+            velocity: 0, deaths: 0, alive: true, score: 0,
+            color: data.role === 'Ceylan' ? '#ff4d4d' : '#4d94ff',
+            heartColor: data.heartColor || '#ff0000'
         };
+        if(data.role === 'Ceylan' && data.limit) deathLimit = parseInt(data.limit);
     });
 
-    socket.on('jump', () => {
-        if (players[socket.id]) {
-            if (!players[socket.id].alive) {
-                players[socket.id].alive = true;
-                players[socket.id].y = 300;
-                players[socket.id].score = 0;
-                players[socket.id].velocity = 0;
-            }
-            players[socket.id].velocity = -6;
-        }
+    socket.on('toggleMessage', (val) => {
+        if (players[socket.id]?.role === 'Hakkı') showTogetherMessage = val;
     });
 
+    socket.on('jump', () => { if (players[socket.id]) players[socket.id].velocity = -6; });
+    socket.on('chat', (msg) => { io.emit('chat', { from: players[socket.id]?.role, msg }); });
     socket.on('disconnect', () => { delete players[socket.id]; });
 });
 
 setInterval(() => {
-    frameCount++;
-    if (frameCount % 100 === 0) createPipe();
-    pipes.forEach(p => p.x -= gameSpeed);
-    pipes = pipes.filter(p => p.x > -60);
+    if (Math.random() < 0.02) {
+        const height = Math.floor(Math.random() * 150) + 50;
+        pipes.push({ x: 600, y: height, scored: false });
+    }
+    pipes.forEach(p => p.x -= 3);
+    
+    // Skor ve Combo Mantığı
+    pipes.forEach(p => {
+        if (p.x < 100 && !p.scored) {
+            p.scored = true;
+            comboCount++; 
+        }
+    });
+
+    pipes = pipes.filter(p => p.x > -50);
 
     for (let id in players) {
         let p = players[id];
-        if (!p.alive) continue;
-        p.velocity += 0.25;
-        p.y += p.velocity;
-        if (p.y > 600 || p.y < 0) p.alive = false;
-        pipes.forEach(pipe => {
-            if (100 + 25 > pipe.x && 100 < pipe.x + 50 && (p.y < pipe.top || p.y + 25 > pipe.bottom)) p.alive = false;
-            if (pipe.x + 50 < 100 && !pipe.scored) {
-                p.score++;
-                pipe.scored = true;
-            }
-        });
+        p.velocity += 0.25; p.y += p.velocity;
+        let limitTop = p.role === 'Hakkı' ? 0 : 300;
+        let limitBottom = p.role === 'Hakkı' ? 300 : 600;
+        
+        if (p.y < limitTop || p.y > limitBottom - 25) {
+            p.deaths++; p.y = limitTop + 50; p.velocity = 0;
+            comboCount = 0; // Biri yanarsa beraberlik bozulur
+        }
     }
-    io.emit('gameState', { players, pipes });
+    io.emit('gameState', { players, pipes, comboCount, deathLimit, showTogetherMessage });
 }, 1000 / 60);
 
-const PORT = process.env.PORT || 3000;
-http.listen(PORT, '0.0.0.0', () => console.log(`Port: ${PORT}`));
+http.listen(process.env.PORT || 3000, '0.0.0.0');
