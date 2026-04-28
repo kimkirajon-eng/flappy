@@ -2,32 +2,45 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>İddialı Bird</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aşkın Tatlı Kapışması</title>
     <style>
-        body { margin: 0; background: #222; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; overflow: hidden; touch-action: manipulation; }
-        canvas { border: 2px solid #555; background: #70c5ce; max-width: 100%; height: auto; display: block; }
-        #login { position: fixed; top:0; left:0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 999; }
-        input { padding: 15px; margin: 10px; width: 80%; max-width: 300px; border-radius: 8px; border: none; font-size: 18px; }
-        button { padding: 15px 40px; cursor: pointer; background: #e67e22; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 18px; }
-        #overlay { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; pointer-events: none; font-size: 12px; z-index: 10; }
+        body { margin: 0; background: #fbefef; font-family: 'Comic Sans MS', cursive; display: flex; flex-direction: column; align-items: center; overflow: hidden; }
+        #setup { position: fixed; top:0; left:0; width: 100%; height: 100%; background: #fff0f5; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .char-btn { padding: 15px; margin: 10px; border-radius: 15px; border: 2px solid #ff69b4; cursor: pointer; font-size: 18px; width: 180px; }
+        #hakki-controls { position: fixed; top: 10px; right: 10px; display: none; }
+        #chat-box { position: fixed; bottom: 10px; right: 10px; width: 220px; background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px; }
+        canvas { background: #87CEEB; border-top: 5px solid #ff69b4; border-bottom: 5px solid #4d94ff; }
     </style>
 </head>
 <body>
-    <div id="login">
-        <h1>Bird İddia</h1>
-        <input type="text" id="nick" placeholder="Adın">
-        <input type="text" id="bet" placeholder="Neyine? (Örn: Yemek)">
-        <button id="joinBtn">OYUNA KATIL</button>
+    <div id="setup">
+        <h1 style="color: #ff1493;">Aşkın Tatlı Kapışması</h1>
+        <div id="char-select">
+            <button class="char-btn" style="background: #4d94ff;" onclick="selectChar('Hakkı')">Hakkı</button>
+            <button class="char-btn" style="background: #ff4d4d;" onclick="selectChar('Ceylan')">Ceylan</button>
+        </div>
+        <div id="bet-area" style="display: none; text-align: center;">
+            <p>Kalp Rengini Seç:</p>
+            <input type="color" id="heart-color" value="#ff0000"><br><br>
+            <input type="text" id="bet-input" placeholder="Neyine oynuyoruz?">
+            <div id="ceylan-extras" style="display: none;">
+                <input type="number" id="limit-input" placeholder="Ölüm sınırı?" value="10">
+            </div>
+            <br><button class="char-btn" onclick="startGame()">Başla!</button>
+        </div>
     </div>
-    
-    <div id="overlay">
-        <strong>Pano:</strong>
-        <div id="bet-list"></div>
-    </div>
-    
-    <canvas id="gameCanvas" width="600" height="600"></canvas>
 
+    <div id="hakki-controls">
+        <label><input type="checkbox" id="msg-toggle" checked onchange="toggleMsg(this.checked)"> Mesajı Göster</label>
+    </div>
+
+    <div id="chat-box">
+        <div id="messages" style="height: 80px; overflow-y: auto;"></div>
+        <input type="text" id="msg-input" placeholder="Yaz..." style="width:90%">
+    </div>
+
+    <canvas id="gameCanvas" width="600" height="600"></canvas>
     <script src="/socket.io/socket.io.js"></script>
     <script src="script.js"></script>
 </body>
