@@ -1,61 +1,79 @@
 const socket = io();
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const betList = document.getElementById('bet-list');
-const loginScreen = document.getElementById('login');
-const joinBtn = document.getElementById('joinBtn');
+let myRole = "";
 
-// Oyuna Katıl Butonu Fonksiyonu
-joinBtn.onclick = () => {
-    const role = document.getElementById('nick').value;
-    const bet = document.getElementById('bet').value;
-    if(role) {
-        socket.emit('join', { role, bet });
-        loginScreen.style.display = 'none'; // Ekranı kesin kapat
-    } else {
-        alert("Lütfen bir isim gir!");
-    }
-};
+function selectChar(role) {
+    myRole = role;
+    document.getElementById('char-select').style.display = 'none';
+    document.getElementById('bet-area').style.display = 'block';
+    if(role === 'Ceylan') document.getElementById('ceylan-extras').style.display = 'block';
+    if(role === 'Hakkı') document.getElementById('hakki-controls').style.display = 'block';
+}
+
+function startGame() {
+    socket.emit('join', { 
+        role: myRole, 
+        bet: document.getElementById('bet-input').value,
+        limit: document.getElementById('limit-input').value,
+        heartColor: document.getElementById('heart-color').value
+    });
+    document.getElementById('setup').style.display = 'none';
+}
+
+function toggleMsg(val) { socket.emit('toggleMessage', val); }
+
+function drawHeart(x, y, size, color) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(x, y + size / 4);
+    ctx.quadraticCurveTo(x, y, x + size / 4, y);
+    ctx.quadraticCurveTo(x + size / 2, y, x + size / 2, y + size / 4);
+    ctx.quadraticCurveTo(x + size / 2, y, x + size * 3/4, y);
+    ctx.quadraticCurveTo(x + size, y, x + size, y + size / 4);
+    ctx.quadraticCurveTo(x + size, y + size / 2, x + size / 2, y + size);
+    ctx.quadraticCurveTo(x, y + size / 2, x, y + size / 4);
+    ctx.fill();
+}
 
 socket.on('gameState', (data) => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    betList.innerHTML = "";
+    ctx.clearRect(0, 0, 600, 600);
     
-    // Boruları Çiz
-    ctx.fillStyle = "#27ae60";
-    data.pipes.forEach(pipe => {
-        ctx.fillRect(pipe.x, 0, 50, pipe.top);
-        ctx.fillRect(pipe.x, pipe.bottom, 50, canvas.height - pipe.bottom);
+    // Orta Çizgi
+    ctx.strokeStyle = "white"; ctx.beginPath(); ctx.moveTo(0,300); ctx.lineTo(600,300); ctx.stroke();
+
+    // Kalpler (Engeller)
+    data.pipes.forEach(p => {
+        drawHeart(p.x, p.y, 40, "#ff69b4"); // Üst kat kalbi
+        drawHeart(p.x, p.y + 300, 40, "#ff69b4"); // Alt kat kalbi
     });
 
-    // Oyuncuları Çiz
+    // Oyuncular
     for (let id in data.players) {
         let p = data.players[id];
-        if (!p.alive) continue;
-
         ctx.fillStyle = p.color;
         ctx.fillRect(100, p.y, 25, 25);
-        
-        ctx.fillStyle = "white";
-        ctx.font = "bold 14px Arial";
-        ctx.fillText(p.role, 100, p.y - 10);
+    }
 
-        const div = document.createElement('div');
-        div.style.color = p.color;
-        div.innerHTML = `• ${p.role}: ${p.bet} (${p.score})`;
-        betList.appendChild(div);
+    // Birlikte Başarı Mesajı
+    if (data.comboCount >= 10 && data.showTogetherMessage) {
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = "white";
+        ctx.font = "bold 40px Arial";
+        ctx.fillText("Birlikte tüm engelleri aşarız", 50, 310);
+        ctx.restore();
     }
 });
 
-// MOBİL VE MASAÜSTÜ KONTROLLERİ
-// Ekrana dokunulduğunda veya boşluğa basıldığında zıpla
-const jumpAction = (e) => {
-    // Eğer giriş ekranı açıksa zıplama çalışmasın
-    if (loginScreen.style.display !== 'none') return;
-    socket.emit('jump');
-    if(e.cancelable) e.preventDefault();
-};
-
-window.addEventListener('keydown', (e) => { if(e.code === 'Space') jumpAction(e); });
-window.addEventListener('touchstart', jumpAction, {passive: false});
-window.addEventListener('mousedown', (e) => { if(e.button === 0) jumpAction(e); });
+// Sohbet ve Kontroller
+document.getElementById('msg-input').addEventListener('keypress', (e) => {
+    if(e.key === 'Enter') { socket.emit('chat', e.target.value); e.target.value = ""; }
+});
+socket.on('chat', (d) => {
+    const m = document.getElementById('messages');
+    m.innerHTML += `<div><b>${d.from}:</b> ${d.msg}</div>`;
+    m.scrollTop = m.scrollHeight;
+});
+window.addEventListener('touchstart', () => socket.emit('jump'));
+window.addEventListener('keydown', (e) => { if(e.code === 'Space') socket.emit('jump'); });
