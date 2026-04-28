@@ -3,7 +3,7 @@ const app = express();
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
 
-app.use(express.static(__dirname));
+app.use(express.static('public'));
 
 let players = {};
 let pipes = [];
@@ -18,10 +18,15 @@ function createPipe() {
 }
 
 io.on('connection', (socket) => {
-    socket.on('join', (role) => {
+    socket.on('join', (data) => {
         players[socket.id] = { 
-            role, y: 300, velocity: 0, score: 0, alive: true, 
-            color: role === 'Ceylanım' ? '#ff4d4d' : '#4d94ff' 
+            role: data.role, 
+            bet: data.bet || "Zevkine",
+            y: 300, 
+            velocity: 0, 
+            score: 0, 
+            alive: true, 
+            color: data.role === 'Ceylanım' ? '#ff4d4d' : '#4d94ff' 
         };
         io.emit('highScoreUpdate', highScore);
     });
@@ -41,7 +46,6 @@ io.on('connection', (socket) => {
         io.emit('showEmoji', { emoji, from: players[socket.id]?.role });
     });
 
-    // Ses Sinyalleşmesi
     socket.on('signal', (data) => {
         socket.broadcast.emit('signal', data);
     });
@@ -76,4 +80,5 @@ setInterval(() => {
     io.emit('gameState', { players, pipes, frameCount });
 }, 1000 / 60);
 
-http.listen(3000, '0.0.0.0', () => console.log("Oyun 3000 portunda hazır!"));
+const PORT = process.env.PORT || 3000;
+http.listen(PORT, '0.0.0.0', () => console.log(`Oyun ${PORT} portunda hazır!`));
