@@ -1,27 +1,28 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Multiplayer Bet Bird</title>
+    <meta charset="UTF-8">
+    <title>İddialı Bird</title>
     <style>
-        body { margin: 0; background: #222; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
+        body { margin: 0; background: #222; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; overflow: hidden; }
         canvas { border: 2px solid #555; background: #70c5ce; margin-top: 10px; }
-        #login { position: absolute; background: rgba(0,0,0,0.8); width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10; }
-        input { padding: 10px; margin: 5px; width: 200px; border-radius: 5px; border: none; }
-        button { padding: 10px 20px; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 5px; }
-        #bet-overlay { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; pointer-events: none; }
+        #login { position: absolute; background: rgba(0,0,0,0.9); width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
+        input { padding: 12px; margin: 8px; width: 250px; border-radius: 8px; border: none; font-size: 16px; }
+        button { padding: 12px 30px; cursor: pointer; background: #e67e22; color: white; border: none; border-radius: 8px; font-weight: bold; }
+        #overlay { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.6); padding: 15px; border-radius: 10px; pointer-events: none; min-width: 150px; }
     </style>
 </head>
 <body>
     <div id="login">
-        <h1>Multiplayer Bird</h1>
-        <input type="text" id="nick" placeholder="Adın">
+        <h1>Bird İddia Ekranı</h1>
+        <input type="text" id="nick" placeholder="Adın / Rolün">
         <input type="text" id="bet" placeholder="Neyine oynuyorsun?">
-        <button onclick="joinGame()">Başla!</button>
+        <button onclick="joinGame()">OYUNA KATIL</button>
     </div>
     
-    <div id="bet-overlay">
-        <strong>Mevcut İddialar:</strong>
-        <div id="bet-list"></div>
+    <div id="overlay">
+        <strong>🏆 Rekabet Panosu</strong>
+        <div id="bet-list" style="margin-top:10px;"></div>
     </div>
     
     <canvas id="gameCanvas" width="600" height="600"></canvas>
