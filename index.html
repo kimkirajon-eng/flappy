@@ -1,47 +1,121 @@
 <!DOCTYPE html>
-<html>
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aşkın Tatlı Kapışması</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Aşkın Tatlı Kapışması ❤️</title>
     <style>
-        body { margin: 0; background: #fbefef; font-family: 'Comic Sans MS', cursive; display: flex; flex-direction: column; align-items: center; overflow: hidden; }
-        #setup { position: fixed; top:0; left:0; width: 100%; height: 100%; background: #fff0f5; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .char-btn { padding: 15px; margin: 10px; border-radius: 15px; border: 2px solid #ff69b4; cursor: pointer; font-size: 18px; width: 180px; }
-        #hakki-controls { position: fixed; top: 10px; right: 10px; display: none; }
-        #chat-box { position: fixed; bottom: 10px; right: 10px; width: 220px; background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px; }
-        canvas { background: #87CEEB; border-top: 5px solid #ff69b4; border-bottom: 5px solid #4d94ff; }
+        body { margin: 0; font-family: 'Arial', sans-serif; touch-action: manipulation; overflow: hidden; background: #ffafbd; }
+        #login { position: fixed; inset: 0; background: #fff0f5; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 99999; text-align: center; }
+        .setup-box { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .btn-group { display: flex; gap: 15px; margin: 20px 0; }
+        button { padding: 15px 30px; font-size: 18px; cursor: pointer; border-radius: 50px; border: none; font-weight: bold; transition: 0.3s; }
+        input { padding: 12px; margin: 10px 0; width: 80%; border-radius: 10px; border: 1px solid #ddd; }
+        #game-area { display: none; height: 100vh; flex-direction: column; }
+        .screen-wrapper { position: relative; height: 50%; border-bottom: 2px solid white; }
+        canvas { width: 100%; height: 100%; display: block; }
+        .mic-btn { position: absolute; top: 15px; left: 15px; z-index: 1000; width: 45px; height: 45px; border-radius: 50%; border: none; font-size: 20px; background: rgba(255,255,255,0.6); }
+        #together-msg { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 40px; color: rgba(255,255,255,0.4); pointer-events: none; text-align: center; width: 100%; z-index: 5; }
+        #hakki-toggle { position: fixed; top: 15px; left: 80px; z-index: 1000; color: white; display: none; }
     </style>
 </head>
 <body>
-    <div id="setup">
-        <h1 style="color: #ff1493;">Aşkın Tatlı Kapışması</h1>
-        <div id="char-select">
-            <button class="char-btn" style="background: #4d94ff;" onclick="selectChar('Hakkı')">Hakkı</button>
-            <button class="char-btn" style="background: #ff4d4d;" onclick="selectChar('Ceylan')">Ceylan</button>
-        </div>
-        <div id="bet-area" style="display: none; text-align: center;">
-            <p>Kalp Rengini Seç:</p>
-            <input type="color" id="heart-color" value="#ff0000"><br><br>
-            <input type="text" id="bet-input" placeholder="Neyine oynuyoruz?">
-            <div id="ceylan-extras" style="display: none;">
-                <input type="number" id="limit-input" placeholder="Ölüm sınırı?" value="10">
+    <div id="login">
+        <div class="setup-box">
+            <h1 style="color: #ff1493; margin-bottom: 5px;">Aşkın Tatlı Kapışması</h1>
+            <p style="color: #888; font-style: italic;">"Zorlukları beraber aşalım..."</p>
+            <div class="btn-group">
+                <button id="btnCeylan" onclick="setRole('Ceylanım')" style="background: #ff4d4d; color: white;">Ceylanım</button>
+                <button id="btnBen" onclick="setRole('Ben')" style="background: #4d94ff; color: white;">Ben</button>
             </div>
-            <br><button class="char-btn" onclick="startGame()">Başla!</button>
+            <div id="details" style="display: none;">
+                <input type="text" id="bet" placeholder="Neyine oynuyoruz?">
+                <div id="ceylan-only" style="display: none;">
+                    <input type="number" id="limit" placeholder="Kaç ölümde bitsin?" value="10">
+                </div>
+                <p>Karakter Rengin:</p>
+                <input type="color" id="heartColor" value="#ff4d4d"><br>
+                <button onclick="join()" style="background: #e67e22; color: white; margin-top: 15px;">OYUNA KATIL</button>
+            </div>
         </div>
     </div>
 
-    <div id="hakki-controls">
-        <label><input type="checkbox" id="msg-toggle" checked onchange="toggleMsg(this.checked)"> Mesajı Göster</label>
+    <div id="together-msg"></div>
+    <div id="hakki-toggle">
+        <label><input type="checkbox" checked onchange="socket.emit('toggleMessage', this.checked)"> Mesajı Göster</label>
     </div>
 
-    <div id="chat-box">
-        <div id="messages" style="height: 80px; overflow-y: auto;"></div>
-        <input type="text" id="msg-input" placeholder="Yaz..." style="width:90%">
+    <div id="game-area">
+        <div class="screen-wrapper"><button id="micTop" class="mic-btn" onclick="toggleMic()">🎤</button><canvas id="canvasTop"></canvas></div>
+        <div class="screen-wrapper"><button id="micBottom" class="mic-btn" onclick="toggleMic()">🎤</button><canvas id="canvasBottom"></canvas></div>
     </div>
 
-    <canvas id="gameCanvas" width="600" height="600"></canvas>
     <script src="/socket.io/socket.io.js"></script>
-    <script src="script.js"></script>
+    <script>
+        const socket = io();
+        let myRole = null, localStream, peerConnection, micActive = true;
+        const canvases = [document.getElementById('canvasTop'), document.getElementById('canvasBottom')];
+        const ctxs = canvases.map(c => c.getContext('2d'));
+
+        function setRole(role) {
+            myRole = role;
+            document.getElementById('details').style.display = 'block';
+            document.getElementById('ceylan-only').style.display = role === 'Ceylanım' ? 'block' : 'none';
+        }
+
+        async function join() {
+            const bet = document.getElementById('bet').value;
+            const limit = document.getElementById('limit').value;
+            const heartColor = document.getElementById('heartColor').value;
+            
+            socket.emit('join', { role: myRole, bet, limit, heartColor });
+            document.getElementById('login').style.display = 'none';
+            document.getElementById('game-area').style.display = 'flex';
+            if(myRole === 'Ben') document.getElementById('hakki-toggle').style.display = 'block';
+            
+            resize();
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                initVoice();
+            } catch (e) { console.log("Ses izni yok."); }
+        }
+
+        function drawHeart(ctx, x, y, size, color) {
+            ctx.fillStyle = color; ctx.beginPath();
+            ctx.moveTo(x, y + size/4); ctx.quadraticCurveTo(x, y, x + size/4, y);
+            ctx.quadraticCurveTo(x + size/2, y, x + size/2, y + size/4);
+            ctx.quadraticCurveTo(x + size/2, y, x + size*3/4, y);
+            ctx.quadraticCurveTo(x + size, y, x + size, y + size/4);
+            ctx.quadraticCurveTo(x + size, y + size/2, x + size/2, y + size*3/4);
+            ctx.quadraticCurveTo(x, y + size/2, x, y + size/4); ctx.fill();
+        }
+
+        socket.on('gameState', d => {
+            const msgEl = document.getElementById('together-msg');
+            msgEl.innerText = (d.comboCount >= 10 && d.showTogetherMessage) ? "Birlikte tüm engelleri aşarız ❤️" : "";
+            
+            ctxs.forEach((ctx, index) => {
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                ctx.fillStyle = "rgba(255,255,255,0.4)";
+                d.pipes.forEach(p => { 
+                    ctx.fillRect(p.x, 0, 50, p.top/2); 
+                    ctx.fillRect(p.x, p.bottom/2, 50, ctx.canvas.height); 
+                });
+                for (let id in d.players) {
+                    let p = d.players[id];
+                    if ((index === 0 && p.role === 'Ceylanım') || (index === 1 && p.role === 'Ben')) {
+                        drawHeart(ctx, 100, p.y/2, 35, p.alive ? p.heartColor : "#555");
+                        ctx.fillStyle = "white"; ctx.font = "bold 20px Arial";
+                        ctx.fillText(`${p.role} (Ölüm: ${p.deaths}/${d.deathLimit})`, 20, 30);
+                    }
+                }
+            });
+        });
+
+        // Ses ve diğer fonksiyonlar (resize, toggleMic, signal) mevcut kodunla aynı...
+        function resize() { canvases.forEach(c => { c.width = window.innerWidth; c.height = window.innerHeight/2; }); }
+        window.onresize = resize;
+        window.addEventListener('touchstart', e => { if(e.target.tagName !== 'BUTTON') { e.preventDefault(); socket.emit('jump'); }}, {passive: false});
+    </script>
 </body>
 </html>
