@@ -2,8 +2,10 @@ const express = require('express');
 const app = express();
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
+const path = require('path');
 
-app.use(express.static('public'));
+// Dosyalar ana dizinde olduğu için statik yolu güncelledik
+app.use(express.static(__dirname));
 
 let players = {};
 let pipes = [];
@@ -17,15 +19,16 @@ function createPipe() {
     pipes.push({ x: 600, top: height, bottom: height + gap, scored: false });
 }
 
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 io.on('connection', (socket) => {
     socket.on('join', (data) => {
         players[socket.id] = { 
             role: data.role, 
             bet: data.bet || "Zevkine",
-            y: 300, 
-            velocity: 0, 
-            score: 0, 
-            alive: true, 
+            y: 300, velocity: 0, score: 0, alive: true, 
             color: data.role === 'Ceylanım' ? '#ff4d4d' : '#4d94ff' 
         };
         io.emit('highScoreUpdate', highScore);
@@ -40,14 +43,6 @@ io.on('connection', (socket) => {
             }
             players[socket.id].velocity = -6;
         }
-    });
-
-    socket.on('sendEmoji', (emoji) => {
-        io.emit('showEmoji', { emoji, from: players[socket.id]?.role });
-    });
-
-    socket.on('signal', (data) => {
-        socket.broadcast.emit('signal', data);
     });
 
     socket.on('disconnect', () => { delete players[socket.id]; });
@@ -81,4 +76,4 @@ setInterval(() => {
 }, 1000 / 60);
 
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, '0.0.0.0', () => console.log(`Oyun ${PORT} portunda hazır!`));
+http.listen(PORT, '0.0.0.0', () => console.log(`Oyun ${PORT} portunda açıldı!`));
