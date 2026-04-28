@@ -4,7 +4,7 @@ const ctx = canvas.getContext('2d');
 let myRole = ""; 
 let askActive = true;
 
-// Ekran boyutunu ayarla
+// Ekran boyutunu tam sayfa yap
 function resize() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -12,7 +12,7 @@ function resize() {
 window.onresize = resize;
 resize();
 
-// 1. Adım: Karakter Seçimi
+// 1. Adım: Karakter Seçimi (Hakkı veya Ceylan)
 function pickRole(r) {
     myRole = r;
     document.getElementById('step1').classList.remove('active');
@@ -23,19 +23,22 @@ function pickRole(r) {
     if(r === 'Ceylan') {
         document.getElementById('ceylan-only').style.display = 'block';
     }
-    // Sadece Hakkı Aşk Modu butonunu görebilir
+    // Sadece Hakkı Aşk Modu butonunu kontrol edebilir
     if(r === 'Hakkı') {
         document.getElementById('ask-btn-area').style.display = 'block';
     }
 }
 
-// 2. Adım: Oyuna Giriş
+// 2. Adım: Detayları Gönder ve Oyuna Gir
 function finishSetup() {
     const bet = document.getElementById('betInput').value;
     const limit = document.getElementById('limitInput').value;
     const heartColor = document.getElementById('hColor').value;
 
-    if(!bet) { alert("Lütfen neyine oynadığınızı yazın!"); return; }
+    if(!bet) {
+        alert("Lütfen neyine oynadığınızı yazın! ❤️");
+        return;
+    }
 
     socket.emit('join', {
         role: myRole,
@@ -43,10 +46,11 @@ function finishSetup() {
         limit: limit,
         heartColor: heartColor
     });
+    
     document.getElementById('overlay').style.display = 'none';
 }
 
-// Aşk Modu Kontrolü (Sadece Hakkı)
+// Aşk Modu Kontrolü (Hakkı tarafı)
 function toggleAsk() {
     askActive = !askActive;
     socket.emit('toggleAskModu', askActive);
@@ -58,7 +62,7 @@ function toggleAsk() {
 // Mesajlaşma Paneli
 function toggleChat() {
     const area = document.getElementById('chat-input-area');
-    area.style.display = area.style.display === 'none' ? 'block' : 'none';
+    area.style.display = (area.style.display === 'none' || area.style.display === '') ? 'block' : 'none';
     if(area.style.display === 'block') document.getElementById('cMsg').focus();
 }
 
@@ -73,14 +77,14 @@ function sendChat(e) {
     }
 }
 
-// Oyun Yeniden Başlatma
+// Yeniden Başlatma İsteği
 function requestRestart() {
     socket.emit('restartRequest');
 }
 
 // Sunucudan Gelen Komutlar
 socket.on('resetClient', () => {
-    window.location.reload(); // Herkesi ilk ekrana döndür
+    window.location.reload(); // Herkesi en başa döndür
 });
 
 socket.on('gameOver', (text) => {
@@ -88,27 +92,23 @@ socket.on('gameOver', (text) => {
     document.getElementById('win-text').innerHTML = text;
 });
 
-socket.on('chat', (data) => {
-    // Ekranda kısa süreli mesaj gösterme (isteğe bağlı eklenebilir)
-    console.log(`${data.from}: ${data.msg}`);
-});
-
-// Oyun Döngüsü Çizimi
+// Oyunun Çizim Döngüsü
 socket.on('gameState', (data) => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Engel Kalpleri Çiz (Pembe)
+    // Engelleri Çiz (Pembe Kalpler)
     data.pipes.forEach(p => {
         drawHeart(ctx, p.x, p.top, 40, "#ff69b4");
-        drawHeart(ctx, p.x, p.bottom, 40, "#ff69b4");
+        // Alt engel (isteğe bağlı eklenebilir)
+        if(p.bottom) drawHeart(ctx, p.x, p.bottom, 40, "#ff69b4");
     });
 
-    // Oyuncuları (Kalpleri) Çiz
+    // Oyuncuları Çiz (Seçtikleri renklerde kalpler)
     for (let id in data.players) {
         let p = data.players[id];
         drawHeart(ctx, 100, p.y, 45, p.heartColor);
         
-        // İsim ve Ölüm Sayacı
+        // Karakter İsmi ve Ölüm Sayısı
         ctx.fillStyle = "#d02090";
         ctx.font = "bold 16px Arial";
         ctx.textAlign = "center";
@@ -116,7 +116,7 @@ socket.on('gameState', (data) => {
     }
 });
 
-// Kalp Çizme Fonksiyonu
+// Kalp Çizim Fonksiyonu
 function drawHeart(ctx, x, y, size, color) {
     ctx.fillStyle = color;
     ctx.beginPath();
@@ -130,11 +130,13 @@ function drawHeart(ctx, x, y, size, color) {
     ctx.fill();
 }
 
-// Kontroller
+// Kontroller (Boşluk tuşu ve Dokunmatik)
 window.addEventListener('keydown', (e) => {
     if(e.code === 'Space') socket.emit('jump');
 });
+
 window.addEventListener('touchstart', (e) => {
+    // Butonlara veya inputlara tıklandığında zıplamayı engelle
     if(e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') {
         socket.emit('jump');
     }
