@@ -4,7 +4,6 @@ const http = require('http').Server(app);
 const io = require('socket.io')(http);
 const path = require('path');
 
-// Dosyalar ana dizinde olduğu için statik yolu güncelledik
 app.use(express.static(__dirname));
 
 let players = {};
@@ -14,7 +13,7 @@ let gameSpeed = 3;
 let highScore = { name: "Yok", score: 0 };
 
 function createPipe() {
-    const gap = 165;
+    const gap = 170; // Mobil için biraz daha geniş boşluk
     const height = Math.floor(Math.random() * 250) + 50;
     pipes.push({ x: 600, top: height, bottom: height + gap, scored: false });
 }
@@ -31,7 +30,6 @@ io.on('connection', (socket) => {
             y: 300, velocity: 0, score: 0, alive: true, 
             color: data.role === 'Ceylanım' ? '#ff4d4d' : '#4d94ff' 
         };
-        io.emit('highScoreUpdate', highScore);
     });
 
     socket.on('jump', () => {
@@ -40,6 +38,7 @@ io.on('connection', (socket) => {
                 players[socket.id].alive = true;
                 players[socket.id].y = 300;
                 players[socket.id].score = 0;
+                players[socket.id].velocity = 0;
             }
             players[socket.id].velocity = -6;
         }
@@ -50,7 +49,7 @@ io.on('connection', (socket) => {
 
 setInterval(() => {
     frameCount++;
-    if (frameCount % 120 === 0) createPipe();
+    if (frameCount % 100 === 0) createPipe();
     pipes.forEach(p => p.x -= gameSpeed);
     pipes = pipes.filter(p => p.x > -60);
 
@@ -65,15 +64,11 @@ setInterval(() => {
             if (pipe.x + 50 < 100 && !pipe.scored) {
                 p.score++;
                 pipe.scored = true;
-                if (p.score > highScore.score) {
-                    highScore = { name: p.role, score: p.score };
-                    io.emit('highScoreUpdate', highScore);
-                }
             }
         });
     }
-    io.emit('gameState', { players, pipes, frameCount });
+    io.emit('gameState', { players, pipes });
 }, 1000 / 60);
 
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, '0.0.0.0', () => console.log(`Oyun ${PORT} portunda açıldı!`));
+http.listen(PORT, '0.0.0.0', () => console.log(`Port: ${PORT}`));
