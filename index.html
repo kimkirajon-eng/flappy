@@ -2,27 +2,28 @@
 <html>
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>İddialı Bird</title>
     <style>
-        body { margin: 0; background: #222; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; overflow: hidden; }
-        canvas { border: 2px solid #555; background: #70c5ce; margin-top: 10px; }
-        #login { position: absolute; background: rgba(0,0,0,0.9); width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
-        input { padding: 12px; margin: 8px; width: 250px; border-radius: 8px; border: none; font-size: 16px; }
-        button { padding: 12px 30px; cursor: pointer; background: #e67e22; color: white; border: none; border-radius: 8px; font-weight: bold; }
-        #overlay { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.6); padding: 15px; border-radius: 10px; pointer-events: none; min-width: 150px; }
+        body { margin: 0; background: #222; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; overflow: hidden; touch-action: manipulation; }
+        canvas { border: 2px solid #555; background: #70c5ce; max-width: 100%; height: auto; display: block; }
+        #login { position: fixed; top:0; left:0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 999; }
+        input { padding: 15px; margin: 10px; width: 80%; max-width: 300px; border-radius: 8px; border: none; font-size: 18px; }
+        button { padding: 15px 40px; cursor: pointer; background: #e67e22; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 18px; }
+        #overlay { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; pointer-events: none; font-size: 12px; z-index: 10; }
     </style>
 </head>
 <body>
     <div id="login">
-        <h1>Bird İddia Ekranı</h1>
-        <input type="text" id="nick" placeholder="Adın / Rolün">
-        <input type="text" id="bet" placeholder="Neyine oynuyorsun?">
-        <button onclick="joinGame()">OYUNA KATIL</button>
+        <h1>Bird İddia</h1>
+        <input type="text" id="nick" placeholder="Adın">
+        <input type="text" id="bet" placeholder="Neyine? (Örn: Yemek)">
+        <button id="joinBtn">OYUNA KATIL</button>
     </div>
     
     <div id="overlay">
-        <strong>🏆 Rekabet Panosu</strong>
-        <div id="bet-list" style="margin-top:10px;"></div>
+        <strong>Pano:</strong>
+        <div id="bet-list"></div>
     </div>
     
     <canvas id="gameCanvas" width="600" height="600"></canvas>
