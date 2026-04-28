@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,30 +10,33 @@
         .step { display: none; text-align: center; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
         .active { display: block; }
         button { padding: 12px 25px; margin: 5px; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; }
-        #win-screen { position: fixed; inset: 0; background: rgba(0,0,0,0.85); color: white; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; text-align: center; }
+        input { padding: 10px; margin: 5px; border-radius: 10px; border: 1px solid #ddd; }
+        #win-screen { position: fixed; inset: 0; background: rgba(0,0,0,0.9); color: white; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; text-align: center; }
         #chat-ui { position: fixed; bottom: 10px; right: 10px; z-index: 50; }
-        canvas { display: block; }
+        canvas { display: block; width: 100vw; height: 100vh; }
     </style>
 </head>
 <body>
     <div id="overlay">
         <div id="step1" class="step active">
-            <h1 style="color: #ff69b4;">Tarafını Seç ❤️</h1>
+            <h1 style="color: #ff69b4;">Aşkın Tatlı Kapışması ❤️</h1>
             <button onclick="pickRole('Hakkı')" style="background: #4d94ff; color: white;">Hakkı</button>
             <button onclick="pickRole('Ceylan')" style="background: #ff4d4d; color: white;">Ceylan</button>
         </div>
         <div id="step2" class="step">
             <h2 id="role-title"></h2>
-            <input type="text" id="betInput" placeholder="Neyine oynuyoruz?" style="padding:10px; width:200px; margin-bottom:10px;"><br>
-            <p>Kalp Rengin:</p>
-            <input type="color" id="hColor" value="#ff0000"><br>
-            <div id="h-extras" style="display: none; margin: 10px;">
-                <label><input type="checkbox" id="askCheck" checked> Aşk Modu (Ceylan Hep Kazansın)</label>
+            <input type="text" id="betInput" placeholder="Neyine oynuyoruz?">
+            <p>Kalbinin Rengi:</p>
+            <input type="color" id="hColor" value="#ff0000">
+            <div id="h-extras" style="display: none; margin-top: 15px;">
+                <label style="color: #d02090; font-weight: bold;">
+                    <input type="checkbox" id="askCheck" checked> Aşk Modu (Ceylan Hep Kazansıın)
+                </label>
             </div>
-            <div id="c-extras" style="display: none; margin: 10px;">
-                Ölüm Sınırı: <input type="number" id="limitInput" value="10" style="width: 50px;">
+            <div id="c-extras" style="display: none; margin-top: 15px;">
+                Ölüm Sınırı: <input type="number" id="limitInput" value="10" style="width: 60px;">
             </div>
-            <button onclick="finishSetup()" style="background: #32cd32; color: white;">BAŞLA!</button>
+            <br><button onclick="finishSetup()" style="background: #32cd32; color: white; margin-top: 15px;">BAŞLA!</button>
         </div>
     </div>
 
@@ -43,85 +46,14 @@
     </div>
 
     <div id="chat-ui">
-        <div id="msgs" style="height: 60px; overflow: hidden; color: white; text-shadow: 1px 1px 1px black;"></div>
-        <button onclick="showChatInput()" style="background: rgba(255,255,255,0.5);">💬 Mesaj</button>
+        <div id="msgs" style="height: 60px; color: white; text-shadow: 1px 1px 2px black;"></div>
+        <button onclick="toggleChatIn()">💬 Mesaj</button>
         <input type="text" id="chatIn" style="display: none;" onkeypress="sendChat(event)">
     </div>
 
     <canvas id="gameCanvas"></canvas>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script>
-        const socket = io();
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        let myRole = "";
-
-        function pickRole(r) {
-            myRole = r;
-            document.getElementById('step1').classList.remove('active');
-            document.getElementById('step2').classList.add('active');
-            document.getElementById('role-title').innerText = r;
-            document.getElementById(r === 'Hakkı' ? 'h-extras' : 'c-extras').style.display = 'block';
-        }
-
-        function finishSetup() {
-            socket.emit('join', {
-                role: myRole,
-                bet: document.getElementById('betInput').value,
-                limit: document.getElementById('limitInput').value,
-                askModu: document.getElementById('askCheck').checked,
-                heartColor: document.getElementById('hColor').value
-            });
-            document.getElementById('overlay').style.display = 'none';
-        }
-
-        function showChatInput() { const i = document.getElementById('chatIn'); i.style.display = 'block'; i.focus(); }
-        function sendChat(e) { if(e.key === 'Enter') { socket.emit('chat', e.target.value); e.target.value = ""; e.target.style.display = 'none'; } }
-
-        socket.on('gameState', d => {
-            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-            // Gün Döngüsü: Frame sayısına göre arka planı karart
-            const darkness = Math.abs(Math.sin(d.frameCount * 0.002)) * 100;
-            ctx.fillStyle = `rgb(${255-darkness}, ${192-darkness/2}, ${203-darkness/2})`;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Split Screen Çizgi
-            ctx.strokeStyle = "white"; ctx.lineWidth = 4;
-            ctx.beginPath(); ctx.moveTo(0, canvas.height/2); ctx.lineTo(canvas.width, canvas.height/2); ctx.stroke();
-
-            d.pipes.forEach(p => {
-                ctx.fillStyle = "#2ecc71"; // Flappy Bird Boru Yeşili
-                // Üst Ekran Boruları
-                ctx.fillRect(p.x, 0, 50, p.top * (canvas.height/600));
-                ctx.fillRect(p.x, p.bottom * (canvas.height/600) / 2, 50, canvas.height/2);
-                // Alt Ekran Boruları
-                ctx.fillRect(p.x, canvas.height/2, 50, p.top * (canvas.height/600));
-                ctx.fillRect(p.x, canvas.height/2 + p.bottom * (canvas.height/600) / 2, 50, canvas.height);
-            });
-
-            for (let id in d.players) {
-                let p = d.players[id];
-                let drawY = (p.role === 'Ceylan') ? p.y * (canvas.height/600) : canvas.height/2 + p.y * (canvas.height/600);
-                drawHeart(ctx, 100, drawY, 35, p.heartColor);
-                ctx.fillStyle = "white"; ctx.fillText(`${p.role}: ${p.deaths}`, 10, (p.role === 'Ceylan' ? 20 : canvas.height/2 + 20));
-            }
-        });
-
-        function drawHeart(ctx, x, y, size, color) {
-            ctx.fillStyle = color; ctx.beginPath();
-            ctx.moveTo(x, y + size/4); ctx.quadraticCurveTo(x, y, x + size/4, y);
-            ctx.quadraticCurveTo(x + size/2, y, x + size/2, y + size/4);
-            ctx.quadraticCurveTo(x + size/2, y, x + size*3/4, y);
-            ctx.quadraticCurveTo(x, y + size/2, x, y + size/4);
-            ctx.fill();
-        }
-
-        socket.on('gameOver', t => { document.getElementById('win-screen').style.display='flex'; document.getElementById('win-text').innerHTML=t; });
-        socket.on('resetClient', () => location.reload());
-        socket.on('chat', d => { document.getElementById('msgs').innerHTML = `${d.from}: ${d.msg}`; });
-        window.addEventListener('touchstart', () => socket.emit('jump'));
-        window.addEventListener('keydown', e => { if(e.code === 'Space') socket.emit('jump'); });
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>
