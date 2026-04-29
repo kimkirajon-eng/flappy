@@ -13,22 +13,18 @@ let deathLimit = 10;
 let askModu = true;
 let gameStatus = "playing";
 
-// Orijinal Flappy Bird Fiziği Değerleri
-const GRAVITY = 0.25;
-const JUMP_STRENGTH = -5.5;
-const PIPE_SPEED = 3.5;
+// --- YAVAŞLATILMIŞ FİZİK DEĞERLERİ ---
+const GRAVITY = 0.18; // 0.25'ten düşürüldü (Daha yavaş düşer)
+const JUMP = -4.5;    // -5.5'ten düşürüldü (Daha yumuşak zıplar)
+const SPEED = 2.8;    // 3.5'ten düşürüldü (Engeller daha yavaş gelir)
+const GAP = 160;
 
 function createPipe() {
-    const gap = 140; // Geçiş boşluğu
-    const minPipeHeight = 50;
-    const maxPipeHeight = 110; 
-    const height = Math.floor(Math.random() * (maxPipeHeight - minPipeHeight)) + minPipeHeight;
-    pipes.push({ x: 600, top: height, bottom: height + gap, scored: false });
+    const height = Math.floor(Math.random() * 150) + 40;
+    pipes.push({ x: 600, top: height, bottom: height + GAP, scored: false });
 }
 
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
+app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'index.html')); });
 
 io.on('connection', (socket) => {
     socket.on('join', (data) => {
@@ -42,11 +38,8 @@ io.on('connection', (socket) => {
 
     socket.on('jump', () => {
         if (gameStatus === "playing" && players[socket.id]) {
-            players[socket.id].velocity = JUMP_STRENGTH;
-            if(!players[socket.id].alive) {
-                players[socket.id].alive = true;
-                players[socket.id].y = 150;
-            }
+            players[socket.id].velocity = JUMP;
+            if(!players[socket.id].alive) { players[socket.id].alive = true; players[socket.id].y = 150; }
         }
     });
 
@@ -55,15 +48,14 @@ io.on('connection', (socket) => {
         io.emit('resetClient');
     });
 
-    socket.on('chat', (msg) => io.emit('chat', { from: players[socket.id]?.role, msg }));
     socket.on('disconnect', () => { delete players[socket.id]; });
 });
 
 setInterval(() => {
     if (gameStatus !== "playing") return;
     frameCount++;
-    if (frameCount % 90 === 0) createPipe();
-    pipes.forEach(p => p.x -= PIPE_SPEED);
+    if (frameCount % 110 === 0) createPipe(); // Engel sıklığı da biraz azaltıldı
+    pipes.forEach(p => p.x -= SPEED);
     pipes = pipes.filter(p => p.x > -100);
 
     for (let id in players) {
@@ -71,15 +63,10 @@ setInterval(() => {
         p.velocity += GRAVITY;
         p.y += p.velocity;
 
-        // Tavan ve Taban Çarpışması (300px limit)
-        if (p.y < 0 || p.y > 270) {
-            p.alive = false; p.deaths++; p.y = 150; p.velocity = 0;
-        }
-
-        // Boru Çarpışması
+        if (p.y < 0 || p.y > 280) { p.alive = false; p.deaths++; p.y = 150; p.velocity = 0; }
         pipes.forEach(pipe => {
-            if (100 + 25 > pipe.x && 100 < pipe.x + 50) {
-                if (p.y < pipe.top || p.y + 25 > pipe.bottom) {
+            if (100 + 30 > pipe.x && 100 < pipe.x + 50) {
+                if (p.y < pipe.top || p.y + 30 > pipe.bottom) {
                     p.alive = false; p.deaths++; p.y = 150; p.velocity = 0;
                 }
             }
