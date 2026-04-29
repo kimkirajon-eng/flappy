@@ -1,143 +1,87 @@
 const socket = io();
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-let myRole = ""; 
-let askActive = true;
+let myRole = "";
 
-// Ekran boyutunu tam sayfa yap
-function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-}
-window.onresize = resize;
-resize();
-
-// 1. Adım: Karakter Seçimi (Hakkı veya Ceylan)
 function pickRole(r) {
     myRole = r;
     document.getElementById('step1').classList.remove('active');
     document.getElementById('step2').classList.add('active');
     document.getElementById('role-title').innerText = "Hoş geldin " + r;
-    
-    // Sadece Ceylan ölüm sınırını belirleyebilir
-    if(r === 'Ceylan') {
-        document.getElementById('ceylan-only').style.display = 'block';
-    }
-    // Sadece Hakkı Aşk Modu butonunu kontrol edebilir
-    if(r === 'Hakkı') {
-        document.getElementById('ask-btn-area').style.display = 'block';
-    }
+    document.getElementById('h-extras').style.display = (r === 'Hakkı' ? 'block' : 'none');
+    document.getElementById('c-extras').style.display = (r === 'Ceylan' ? 'block' : 'none');
 }
 
-// 2. Adım: Detayları Gönder ve Oyuna Gir
 function finishSetup() {
-    const bet = document.getElementById('betInput').value;
-    const limit = document.getElementById('limitInput').value;
-    const heartColor = document.getElementById('hColor').value;
-
-    if(!bet) {
-        alert("Lütfen neyine oynadığınızı yazın! ❤️");
-        return;
-    }
-
     socket.emit('join', {
         role: myRole,
-        bet: bet,
-        limit: limit,
-        heartColor: heartColor
+        bet: document.getElementById('betInput').value,
+        limit: document.getElementById('limitInput').value,
+        askModu: document.getElementById('askCheck').checked,
+        heartColor: document.getElementById('hColor').value
     });
-    
     document.getElementById('overlay').style.display = 'none';
 }
 
-// Aşk Modu Kontrolü (Hakkı tarafı)
-function toggleAsk() {
-    askActive = !askActive;
-    socket.emit('toggleAskModu', askActive);
-    const btn = document.getElementById('askBtn');
-    btn.innerText = "Aşk Modu: " + (askActive ? "AÇIK" : "KAPALI");
-    btn.style.background = askActive ? "#ff69b4" : "#555";
-}
-
-// Mesajlaşma Paneli
-function toggleChat() {
-    const area = document.getElementById('chat-input-area');
-    area.style.display = (area.style.display === 'none' || area.style.display === '') ? 'block' : 'none';
-    if(area.style.display === 'block') document.getElementById('cMsg').focus();
+function toggleChatIn() {
+    const i = document.getElementById('chatIn');
+    i.style.display = i.style.display === 'none' ? 'block' : 'none';
+    if(i.style.display === 'block') i.focus();
 }
 
 function sendChat(e) {
     if(e.key === 'Enter') {
-        const msg = e.target.value;
-        if(msg.trim() !== "") {
-            socket.emit('chat', msg);
-            e.target.value = "";
-            toggleChat();
-        }
+        socket.emit('chat', e.target.value);
+        e.target.value = ""; e.target.style.display = 'none';
     }
 }
 
-// Yeniden Başlatma İsteği
-function requestRestart() {
-    socket.emit('restartRequest');
-}
-
-// Sunucudan Gelen Komutlar
-socket.on('resetClient', () => {
-    window.location.reload(); // Herkesi en başa döndür
-});
-
-socket.on('gameOver', (text) => {
-    document.getElementById('win-screen').style.display = 'flex';
-    document.getElementById('win-text').innerHTML = text;
-});
-
-// Oyunun Çizim Döngüsü
-socket.on('gameState', (data) => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+socket.on('gameState', d => {
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
     
-    // Engelleri Çiz (Pembe Kalpler)
-    data.pipes.forEach(p => {
-        drawHeart(ctx, p.x, p.top, 40, "#ff69b4");
-        // Alt engel (isteğe bağlı eklenebilir)
-        if(p.bottom) drawHeart(ctx, p.x, p.bottom, 40, "#ff69b4");
+    // Gün Döngüsü Arka Planı
+    const darkness = Math.abs(Math.sin(d.frameCount * 0.003)) * 120;
+    ctx.fillStyle = `rgb(${255-darkness}, ${192-darkness/2}, ${203-darkness/2})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Orta Çizgi
+    ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(0, canvas.height/2); ctx.lineTo(canvas.width, canvas.height/2); ctx.stroke();
+
+    const scale = canvas.height / 600;
+
+    d.pipes.forEach(p => {
+        ctx.fillStyle = "#2ecc71";
+        // Ceylan Ekranı (Üst)
+        ctx.fillRect(p.x, 0, 50, p.top * scale);
+        ctx.fillRect(p.x, p.bottom * scale, 50, canvas.height/2);
+        // Hakkı Ekranı (Alt)
+        ctx.fillRect(p.x, canvas.height/2, 50, p.top * scale);
+        ctx.fillRect(p.x, (canvas.height/2) + (p.bottom * scale), 50, canvas.height);
     });
 
-    // Oyuncuları Çiz (Seçtikleri renklerde kalpler)
-    for (let id in data.players) {
-        let p = data.players[id];
-        drawHeart(ctx, 100, p.y, 45, p.heartColor);
-        
-        // Karakter İsmi ve Ölüm Sayısı
-        ctx.fillStyle = "#d02090";
-        ctx.font = "bold 16px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText(`${p.role} (${p.deaths})`, 122, p.y - 15);
+    for (let id in d.players) {
+        let p = d.players[id];
+        let baseHeight = (p.role === 'Ceylan' ? 0 : canvas.height/2);
+        drawHeart(ctx, 100, baseHeight + (p.y * scale), 35, p.heartColor);
+        ctx.fillStyle = "white"; ctx.font = "bold 16px Arial";
+        ctx.fillText(`${p.role}: ${p.deaths}`, 20, baseHeight + 30);
     }
 });
 
-// Kalp Çizim Fonksiyonu
 function drawHeart(ctx, x, y, size, color) {
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.moveTo(x, y + size / 4);
-    ctx.quadraticCurveTo(x, y, x + size / 4, y);
-    ctx.quadraticCurveTo(x + size / 2, y, x + size / 2, y + size / 4);
-    ctx.quadraticCurveTo(x + size / 2, y, x + size * 3 / 4, y);
-    ctx.quadraticCurveTo(x + size, y, x + size, y + size / 4);
-    ctx.quadraticCurveTo(x + size, y + size / 2, x + size / 2, y + size * 3 / 4);
-    ctx.quadraticCurveTo(x, y + size / 2, x, y + size / 4);
-    ctx.fill();
+    ctx.fillStyle = color; ctx.beginPath();
+    ctx.moveTo(x, y + size/4); ctx.quadraticCurveTo(x, y, x + size/4, y);
+    ctx.quadraticCurveTo(x + size/2, y, x + size/2, y + size/4);
+    ctx.quadraticCurveTo(x + size/2, y, x + size*3/4, y);
+    ctx.quadraticCurveTo(x + size, y, x + size, y + size/4);
+    ctx.quadraticCurveTo(x + size, y + size/2, x + size/2, y + size*3/4);
+    ctx.quadraticCurveTo(x, y + size/2, x, y + size/4); ctx.fill();
 }
 
-// Kontroller (Boşluk tuşu ve Dokunmatik)
-window.addEventListener('keydown', (e) => {
-    if(e.code === 'Space') socket.emit('jump');
-});
+socket.on('gameOver', t => { document.getElementById('win-screen').style.display='flex'; document.getElementById('win-text').innerHTML=t; });
+socket.on('resetClient', () => location.reload());
+socket.on('chat', d => { document.getElementById('msgs').innerHTML = `<b>${d.from}:</b> ${d.msg}`; });
 
-window.addEventListener('touchstart', (e) => {
-    // Butonlara veya inputlara tıklandığında zıplamayı engelle
-    if(e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') {
-        socket.emit('jump');
-    }
-});
+window.addEventListener('touchstart', (e) => { if(e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') socket.emit('jump'); });
+window.addEventListener('keydown', e => { if(e.code === 'Space') socket.emit('jump'); });
