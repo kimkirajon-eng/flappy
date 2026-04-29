@@ -2,53 +2,61 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Aşkın Tatlı Kapışması ❤️</title>
     <style>
-        body { margin: 0; font-family: 'Arial'; background: #ffc0cb; overflow: hidden; }
-        #overlay { position: fixed; inset: 0; background: #fff0f5; z-index: 1000; display: flex; align-items: center; justify-content: center; }
-        .step { display: none; text-align: center; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #ffe4e1; overflow: hidden; touch-action: none; }
+        #overlay { position: fixed; inset: 0; background: rgba(255,192,203,0.98); z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .step { display: none; text-align: center; background: white; padding: 40px; border-radius: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 80%; max-width: 400px; }
         .active { display: block; }
-        button { padding: 12px 25px; margin: 5px; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; }
-        input { padding: 10px; margin: 5px; border-radius: 10px; border: 1px solid #ddd; }
+        button { padding: 15px 30px; margin: 10px; border: none; border-radius: 50px; font-weight: bold; cursor: pointer; font-size: 18px; transition: 0.3s; }
+        input { padding: 15px; margin: 10px; width: 80%; border-radius: 10px; border: 1px solid #ddd; font-size: 16px; }
         #win-screen { position: fixed; inset: 0; background: rgba(0,0,0,0.9); color: white; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; text-align: center; }
-        #chat-ui { position: fixed; bottom: 10px; right: 10px; z-index: 50; }
         canvas { display: block; width: 100vw; height: 100vh; }
+        #chat-ui { position: fixed; bottom: 20px; right: 20px; z-index: 50; }
+        .chat-btn { background: #ff69b4; color: white; width: 50px; height: 50px; border-radius: 50%; font-size: 24px; border: none; }
     </style>
 </head>
 <body>
+    <!-- Giriş ve İddia Ekranı -->
     <div id="overlay">
         <div id="step1" class="step active">
-            <h1 style="color: #ff69b4;">Aşkın Tatlı Kapışması ❤️</h1>
+            <h1 style="color: #ff1493;">Aşkın Tatlı Kapışması ❤️</h1>
             <button onclick="pickRole('Hakkı')" style="background: #4d94ff; color: white;">Hakkı</button>
             <button onclick="pickRole('Ceylan')" style="background: #ff4d4d; color: white;">Ceylan</button>
         </div>
         <div id="step2" class="step">
-            <h2 id="role-title"></h2>
+            <h2 id="role-title" style="color: #ff1493;"></h2>
+            <p>Kalbinin Rengini Seç:</p>
+            <input type="color" id="hColor" value="#ff4d4d" style="height: 50px; cursor: pointer;">
             <input type="text" id="betInput" placeholder="Neyine oynuyoruz?">
-            <p>Kalbinin Rengi:</p>
-            <input type="color" id="hColor" value="#ff0000">
+            
+            <div id="c-extras" style="display: none; margin-top: 15px;">
+                <p>Ölüm Sınırı (Sadece Sen Seçebilirsin):</p>
+                <input type="number" id="limitInput" value="10">
+            </div>
+            
             <div id="h-extras" style="display: none; margin-top: 15px;">
-                <label style="color: #d02090; font-weight: bold;">
-                    <input type="checkbox" id="askCheck" checked> Aşk Modu (Ceylan Hep Kazansıın)
+                <label style="color: #d02090; font-weight: bold; cursor: pointer;">
+                    <input type="checkbox" id="askCheck" checked> Aşk Modu (Ceylan Hep Kazansın)
                 </label>
             </div>
-            <div id="c-extras" style="display: none; margin-top: 15px;">
-                Ölüm Sınırı: <input type="number" id="limitInput" value="10" style="width: 60px;">
-            </div>
-            <br><button onclick="finishSetup()" style="background: #32cd32; color: white; margin-top: 15px;">BAŞLA!</button>
+            
+            <button onclick="finishSetup()" style="background: #32cd32; color: white; margin-top: 20px;">BAŞLA!</button>
         </div>
     </div>
 
+    <!-- Kazanan Ekranı -->
     <div id="win-screen">
-        <h1 id="win-text"></h1>
+        <h1 id="win-text" style="font-size: 40px;"></h1>
         <button onclick="socket.emit('restartRequest')" style="background: #ff1493; color: white;">TEKRAR OYNA</button>
     </div>
 
+    <!-- Mesajlaşma -->
     <div id="chat-ui">
-        <div id="msgs" style="height: 60px; color: white; text-shadow: 1px 1px 2px black;"></div>
-        <button onclick="toggleChatIn()">💬 Mesaj</button>
-        <input type="text" id="chatIn" style="display: none;" onkeypress="sendChat(event)">
+        <div id="msgs" style="background: rgba(0,0,0,0.5); color: white; border-radius: 10px; padding: 5px; margin-bottom: 5px; font-size: 14px;"></div>
+        <input type="text" id="chatIn" style="display: none; width: 150px;" placeholder="Yaz ve Enter..." onkeypress="sendChat(event)">
+        <button class="chat-btn" onclick="toggleChat()">💬</button>
     </div>
 
     <canvas id="gameCanvas"></canvas>
